@@ -177,16 +177,18 @@ export const useSingleFileAuthState = (filename: string, logger?: Logger): { sta
 	}
 }
 
-export const fetchAuthState = async(key: String, redis: any, logger?: Logger): Promise<{ state: AuthenticationState, saveState: () => void }> => {
+export const fetchAuthState = async(key: String, redis: any, options: { logger?: Logger, ttl?: Number } = {}): Promise<{ state: AuthenticationState, saveState: () => void }> => {
+	const { logger, ttl = 60*60*24*60 } = options
+
 	let creds: AuthenticationCreds
 	let keys: any = { }
 
 	// save the authentication state to a file
 	const saveState = async () => {
-		logger && logger.trace('saving auth state')
+		logger && logger.trace('saving auth state with ttl: ' + ttl)
 		// BufferJSON replacer utility saves buffers nicely
 		const value = JSON.stringify({ creds, keys }, BufferJSON.replacer, 2)
-		await redis.set(key, value)
+		await redis.set(key, value, { EX: ttl })
 	}
 
 	const value = await redis.get(key)
